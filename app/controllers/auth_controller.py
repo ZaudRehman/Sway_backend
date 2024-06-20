@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson import ObjectId
 from datetime import datetime, timedelta
-from app.utils.database import user_collection
+from app.utils.database import users_collection
 from flask_bcrypt import Bcrypt
 import jwt
 import random
@@ -23,7 +23,7 @@ def register_user():
     if not username or not email or not password:
         return jsonify({'error': 'Username, email, and password are required'}), 400
 
-    existing_user = Database.find_one({'email': email})
+    existing_user = users_collection.find_one({'email': email})
     if existing_user:
         return jsonify({'error': 'Email already registered'}), 400
 
@@ -37,7 +37,7 @@ def register_user():
         'updated_at': datetime.utcnow()
     }
 
-    result = Database.insert_one(new_user)
+    result = users_collection.insert_one(new_user)
     if result.inserted_id:
         return jsonify({'message': 'User registered successfully'}), 201
     else:
@@ -52,7 +52,7 @@ def login_user():
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user or not bcrypt.check_password_hash(user['password'], password):
         return jsonify({'error': 'Invalid email or password'}), 401
 
@@ -68,7 +68,7 @@ def send_otp():
     if not email:
         return jsonify({'error': 'Email is required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -90,7 +90,7 @@ def verify_otp():
     if not email or not otp:
         return jsonify({'error': 'Email and OTP are required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -113,7 +113,7 @@ def logout_user():
 def load_logged_in_user():
     user_id = session.get('user_id')
     if user_id:
-        g.user = Database.find_one({'_id': ObjectId(user_id)})
+        g.user = users_collection.find_one({'_id': ObjectId(user_id)})
     else:
         g.user = None
 
@@ -141,11 +141,11 @@ def update_user_profile():
     if not new_email:
         return jsonify({'error': 'New email is required'}), 400
 
-    existing_user = Database.find_one({'email': new_email})
+    existing_user = users_collection.find_one({'email': new_email})
     if existing_user and existing_user['_id'] != g.user['_id']:
         return jsonify({'error': 'Email already registered'}), 400
 
-    result = Database.update_one(
+    result = users_collection.update_one(
         {'_id': g.user['_id']},
         {'$set': {'email': new_email, 'updated_at': datetime.utcnow()}}
     )
@@ -160,7 +160,7 @@ def delete_user_profile():
     if not g.user:
         return jsonify({'error': 'User not authenticated'}), 401
 
-    result = Database.delete_one({'_id': g.user['_id']})
+    result = users_collection.delete_one({'_id': g.user['_id']})
 
     if result.deleted_count > 0:
         session.pop('user_id', None)
