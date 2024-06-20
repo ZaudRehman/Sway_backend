@@ -4,3 +4,4 @@ python-dotenv
 bcrypt
 gunicorn
 Werkzeug
+flask_bcrypt
