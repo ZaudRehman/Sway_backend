@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
-from app.utils.database import products_collection
+from app.utils.database import db
 
 product_bp = Blueprint('product', __name__, url_prefix='/product')
+
+products_collection = db.get_collection('products')
 
 @product_bp.route('/', methods=['GET'])
 def get_all_products():
