@@ -2,7 +2,7 @@
 
 import os
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, ConfigurationError, InvalidURI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,7 +27,7 @@ class Database:
             raise ValueError("MongoDB URI must be provided in the environment")
 
         try:
-            self.client = MongoClient(mongo_uri)
+            self.client = MongoClient(mongo_uri, , serverSelectionTimeoutMS=10000)
             self.db = self.client[db_name]
         except ConnectionFailure as e:
             raise Exception(f"Failed to connect to MongoDB: {str(e)}")
@@ -48,7 +48,8 @@ class Database:
 
     def initialize_collections(self, collections):
         for collection_name, options in collections.items():
-            self.db.create_collection(collection_name, **options)
+            if collection_name not in self.db.list_collection_names():
+                self.db.create_collection(collection_name, **options)
 
     def drop_collections(self, collections):
         for collection_name in collections:
@@ -67,3 +68,6 @@ class Database:
 
 # Initialize the database instance
 db = Database()
+
+products_collection = db.get_collection('products')
+users_collection = db.get_collection('users')
