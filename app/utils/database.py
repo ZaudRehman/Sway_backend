@@ -27,7 +27,7 @@ class Database:
             raise ValueError("MongoDB URI must be provided in the environment")
 
         try:
-            self.client = MongoClient(mongo_uri, , serverSelectionTimeoutMS=10000)
+            self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=10000)
             self.db = self.client[db_name]
         except ConnectionFailure as e:
             raise Exception(f"Failed to connect to MongoDB: {str(e)}")
