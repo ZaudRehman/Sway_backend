@@ -7,6 +7,9 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(get_config())
 
+    mail = Mail(app)
+    db.init_app(app, db_name=Config.DB_NAME)
+    
     # Register blueprints
     from app.controllers.auth_controller import auth_bp
     from app.controllers.product_controller import product_bp
