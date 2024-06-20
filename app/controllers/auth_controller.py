@@ -9,11 +9,11 @@ import random
 from flask_mail import Mail, Message
 from app.config.config import Config
 
-bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 bcrypt = Bcrypt()
 mail = Mail()
 
-@bp.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register_user():
     data = request.json
     username = data.get('username')
@@ -43,7 +43,7 @@ def register_user():
     else:
         return jsonify({'error': 'Failed to register user'}), 500
 
-@bp.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login_user():
     data = request.json
     email = data.get('email')
@@ -60,7 +60,7 @@ def login_user():
     return jsonify({'message': 'Login successful'}), 200
 
 
-@bp.route('/send_otp', methods=['POST'])
+@auth_bp.route('/send_otp', methods=['POST'])
 def send_otp():
     data = request.json
     email = data.get('email')
@@ -81,7 +81,7 @@ def send_otp():
 
     return jsonify({'message': 'OTP sent successfully'}), 200
 
-@bp.route('/verify_otp', methods=['POST'])
+@auth_bp.route('/verify_otp', methods=['POST'])
 def verify_otp():
     data = request.json
     email = data.get('email')
@@ -101,7 +101,7 @@ def verify_otp():
         return jsonify({'error': 'Invalid or expired OTP'}), 401
 
 
-@bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST'])
 def logout_user():
     if 'user_id' in session:
         session.pop('user_id', None)
@@ -109,7 +109,7 @@ def logout_user():
     else:
         return jsonify({'error': 'User not logged in'}), 401
 
-@bp.before_app_request
+@auth_bp.before_app_request
 def load_logged_in_user():
     user_id = session.get('user_id')
     if user_id:
@@ -117,7 +117,7 @@ def load_logged_in_user():
     else:
         g.user = None
 
-@bp.route('/profile', methods=['GET'])
+@auth_bp.route('/profile', methods=['GET'])
 def get_user_profile():
     if g.user:
         user_profile = {
@@ -130,7 +130,7 @@ def get_user_profile():
     else:
         return jsonify({'error': 'User not authenticated'}), 401
 
-@bp.route('/profile/update', methods=['PUT'])
+@auth_bp.route('/profile/update', methods=['PUT'])
 def update_user_profile():
     if not g.user:
         return jsonify({'error': 'User not authenticated'}), 401
@@ -155,7 +155,7 @@ def update_user_profile():
     else:
         return jsonify({'error': 'Failed to update profile'}), 500
 
-@bp.route('/profile/delete', methods=['DELETE'])
+@auth_bp.route('/profile/delete', methods=['DELETE'])
 def delete_user_profile():
     if not g.user:
         return jsonify({'error': 'User not authenticated'}), 401
