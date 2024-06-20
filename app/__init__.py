@@ -1,9 +1,10 @@
 from flask import Flask
 from app.utils.database import db
+from app.config.config import Config
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object('app.config.Config')
+    app.config.from_object('Config')
 
     # Register blueprints
     from app.controllers.auth_controller import auth_bp
