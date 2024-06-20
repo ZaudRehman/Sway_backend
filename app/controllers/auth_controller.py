@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson import ObjectId
 from datetime import datetime, timedelta
-from app.utils.database import Database
+from app.utils.database import user_collection
 from flask_bcrypt import Bcrypt
 import jwt
 import random
