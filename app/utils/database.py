@@ -27,9 +27,12 @@ class Database:
             raise ValueError("MongoDB URI must be provided in the environment")
 
         try:
-            self.client = MongoClient(mongo_uri)
+            self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)  # Timeout after 5 seconds
             self.db = self.client[db_name]
-        except ConnectionFailure as e:
+            # Attempt to make a request to verify connection
+            self.client.admin.command('ping')
+            print(f"Connected to MongoDB database: {db_name}")
+        except (ConnectionFailure, ConfigurationError, InvalidURI) as e:
             raise Exception(f"Failed to connect to MongoDB: {str(e)}")
 
     def get_client(self):
@@ -45,6 +48,7 @@ class Database:
     def close(self):
         if self.client is not None:
             self.client.close()
+            print("MongoDB connection closed.")
 
     def initialize_collections(self, collections):
         for collection_name, options in collections.items():
@@ -53,7 +57,8 @@ class Database:
 
     def drop_collections(self, collections):
         for collection_name in collections:
-            self.db.drop_collection(collection_name)
+            if collection_name in self.db.list_collection_names():
+                self.db.drop_collection(collection_name)
 
     def get_collection(self, collection_name):
         if self.db is None:
@@ -68,6 +73,3 @@ class Database:
 
 # Initialize the database instance
 db = Database()
-
-products_collection = db.get_collection('products')
-users_collection = db.get_collection('users')
