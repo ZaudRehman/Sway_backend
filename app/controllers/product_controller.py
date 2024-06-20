@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
-from utils.database import products_collection
+from app.utils.database import products_collection
 
 product_bp = Blueprint('product', __name__, url_prefix='/product')
 
