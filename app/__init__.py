@@ -1,6 +1,7 @@
 from flask import Flask
+from flask_mail import Mail
 from app.utils.database import db
-from app.config.config import get_config
+from app.config.config import get_config, Config
 
 def create_app():
     app = Flask(__name__)
