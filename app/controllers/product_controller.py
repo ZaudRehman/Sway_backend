@@ -2,9 +2,9 @@ from flask import Blueprint, request, jsonify
 from bson import ObjectId
 from utils.database import products_collection
 
-bp = Blueprint('product', __name__, url_prefix='/product')
+product_bp = Blueprint('product', __name__, url_prefix='/product')
 
-@bp.route('/', methods=['GET'])
+@product_bp.route('/', methods=['GET'])
 def get_all_products():
     products = list(products_collection.find({}, {'reviews': 0}))
 
@@ -22,7 +22,7 @@ def get_all_products():
 
     return jsonify(formatted_products), 200
 
-@bp.route('/<product_id>', methods=['GET'])
+@product_bp.route('/<product_id>', methods=['GET'])
 def get_product(product_id):
     product = products_collection.find_one({'_id': ObjectId(product_id)})
 
@@ -41,7 +41,7 @@ def get_product(product_id):
 
     return jsonify(formatted_product), 200
 
-@bp.route('/create', methods=['POST'])
+@product_bp.route('/create', methods=['POST'])
 def create_product():
     data = request.json
     name = data.get('name')
@@ -69,7 +69,7 @@ def create_product():
     else:
         return jsonify({'error': 'Failed to create product'}), 500
 
-@bp.route('/update/<product_id>', methods=['PUT'])
+@product_bp.route('/update/<product_id>', methods=['PUT'])
 def update_product(product_id):
     data = request.json
     name = data.get('name')
@@ -97,7 +97,7 @@ def update_product(product_id):
     else:
         return jsonify({'error': 'Failed to update product'}), 500
 
-@bp.route('/delete/<product_id>', methods=['DELETE'])
+@product_bp.route('/delete/<product_id>', methods=['DELETE'])
 def delete_product(product_id):
     result = products_collection.delete_one({'_id': ObjectId(product_id)})
 
