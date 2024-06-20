@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson import ObjectId
 from datetime import datetime, timedelta
-from app.utils.database import users_collection
+from app.utils.database import db
 from flask_bcrypt import Bcrypt
 import jwt
 import random
@@ -12,6 +12,8 @@ from app.config.config import Config
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 bcrypt = Bcrypt()
 mail = Mail()
+
+users_collection = db.get_collection('users')
 
 @auth_bp.route('/register', methods=['POST'])
 def register_user():
