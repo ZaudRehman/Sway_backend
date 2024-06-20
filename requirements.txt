@@ -5,3 +5,6 @@ bcrypt
 gunicorn
 Werkzeug
 flask_bcrypt
+jwt
+flask_mail
+random
