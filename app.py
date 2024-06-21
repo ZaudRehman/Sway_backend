@@ -4,7 +4,7 @@ from flask import Flask, jsonify
 from app.utils.database import db
 from flask_mail import Mail
 from app.config.config import get_config
-from app.controllers.auth_controller import bp as auth_bp
+from app.controllers.auth_controller import auth_bp
 import os
 
 # Initialize the Flask application
@@ -52,5 +52,5 @@ def test_db_connection():
 def health_check():
     return jsonify({'status': 'healthy'}), 200
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+ #   app.run(debug=True)

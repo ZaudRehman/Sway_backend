@@ -4,10 +4,12 @@ from datetime import datetime, timedelta
 from functools import wraps
 from bson.objectid import ObjectId
 from app.config.config import Config
+from app.utils.email_service import send_otp_email
 from app.services.user_service import UserService
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
 from app.utils.database import db
+import random
 
 bcrypt = Bcrypt()
 auth_bp = Blueprint('auth', __name__)
@@ -15,6 +17,7 @@ auth_bp = Blueprint('auth', __name__)
 # Create MongoClient and UserService instance
 client = MongoClient(Config.MONGO_URI)
 user_service = UserService(client, Config.DB_NAME, 'users')
+users_collection = db.get_collection('users')
 
 def token_required(f):
     @wraps(f)
@@ -52,9 +55,39 @@ def register_user():
 
     try:
         user_id = user_service.add_user(new_user)
-        return jsonify({'message': 'User created successfully', 'user_id': user_id}), 201
+        otp = ''.join([random.choice(string.digits) for _ in range(6)])
+        
+        users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"otp": otp, "is_verified": False}}
+        )
+
+        send_otp_email(data['email'], otp)
+
+        return jsonify({'message': 'OTP Sent to your email', 'user_id': user_id}), 201
     except Exception as e:
         return jsonify({'message': str(e)}), 400
+
+@auth_bp.route('/verify_otp', methods=['POST'])
+def verify_otp():
+    data = request.json
+    email = data.get('email')
+    otp_entered = data.get('otp')
+
+    if not email or not otp_entered:
+        return jsonify({'error': 'Email and OTP are required'}), 400
+
+    user = users_collection.find_one({'email': email})
+
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user['otp'] == otp_entered:
+        users_collection.update_one({'_id': user['_id']}, {'$set': {'is_verified': True}})
+
+        return jsonify({'message': 'OTP verified successfully'}), 200
+    else:
+        return jsonify({'error': 'Invalid OTP'}), 400
 
 @auth_bp.route('/login', methods=['POST'])
 def login_user():
