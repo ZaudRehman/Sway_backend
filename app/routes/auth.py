@@ -40,7 +40,7 @@ def token_required(f):
 
     return decorated
 
-@auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/auth/register', methods=['POST'])
 def register_user():
     data = request.get_json()
 
@@ -68,7 +68,7 @@ def register_user():
     except Exception as e:
         return jsonify({'message': str(e)}), 400
 
-@auth_bp.route('/verify_otp', methods=['POST'])
+@auth_bp.route('/auth/verify_otp', methods=['POST'])
 def verify_otp():
     data = request.json
     email = data.get('email')
@@ -100,7 +100,7 @@ def generate_token(user_id):
     except Exception as e:
         return str(e)
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/auth/login', methods=['POST'])
 def login_user():
     data = request.json
     email = data.get('email')
@@ -121,7 +121,7 @@ def login_user():
 
     return jsonify({'token': token}), 200
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/auth/logout', methods=['POST'])
 @token_required
 def logout_user(current_user):
     # Implement logout functionality as needed (e.g., token blacklist, session management)
