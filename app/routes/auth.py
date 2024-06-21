@@ -89,21 +89,37 @@ def verify_otp():
     else:
         return jsonify({'error': 'Invalid OTP'}), 400
 
+def generate_token(user_id):
+    try:
+        payload = {
+            'exp': datetime.utcnow() + timedelta(hours=24),
+            'iat': datetime.utcnow(),
+            'sub': str(user_id)
+        }
+        return jwt.encode(payload, Config.SECRET_KEY, algorithm='HS256')
+    except Exception as e:
+        return str(e)
+
 @auth_bp.route('/login', methods=['POST'])
 def login_user():
-    auth = request.authorization
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
 
-    if not auth or not auth.username or not auth.password:
-        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+    if not email or not password:
+        return make_response(jsonify({'message': 'Email and password are required'}), 400)
 
-    user = user_service.find_one_by_username(auth.username)
+    user = users_collection.find_one({'email': email})
 
-    if not user or not bcrypt.check_password_hash(user['password'], auth.password):
-        return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+    if not user or not bcrypt.check_password_hash(user['password'], password):
+        return make_response(jsonify({'message': 'Invalid credentials'}), 401)
 
-    token = jwt.encode({'user_id': str(user['_id']), 'exp': datetime.utcnow() + timedelta(hours=24)}, Config.SECRET_KEY, algorithm="HS256")
-    
-    return jsonify({'token': token.decode('utf-8')}), 200
+    if not user.get('is_verified', False):
+        return make_response(jsonify({'message': 'Email is not verified'}), 401)
+
+    token = generate_token(user['_id'])
+
+    return jsonify({'token': token}), 200
 
 @auth_bp.route('/logout', methods=['POST'])
 @token_required
