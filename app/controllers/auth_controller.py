@@ -2,18 +2,20 @@ from flask import Blueprint, request, jsonify, session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson import ObjectId
 from datetime import datetime, timedelta
-from app.utils.database import Database
+from app.utils.database import db
 from flask_bcrypt import Bcrypt
 import jwt
 import random
 from flask_mail import Mail, Message
 from app.config.config import Config
 
-bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 bcrypt = Bcrypt()
 mail = Mail()
 
-@bp.route('/register', methods=['POST'])
+users_collection = db.get_collection('users')
+
+@auth_bp.route('/register', methods=['POST'])
 def register_user():
     data = request.json
     username = data.get('username')
@@ -23,7 +25,7 @@ def register_user():
     if not username or not email or not password:
         return jsonify({'error': 'Username, email, and password are required'}), 400
 
-    existing_user = Database.find_one({'email': email})
+    existing_user = users_collection.find_one({'email': email})
     if existing_user:
         return jsonify({'error': 'Email already registered'}), 400
 
@@ -37,13 +39,13 @@ def register_user():
         'updated_at': datetime.utcnow()
     }
 
-    result = Database.insert_one(new_user)
+    result = users_collection.insert_one(new_user)
     if result.inserted_id:
         return jsonify({'message': 'User registered successfully'}), 201
     else:
         return jsonify({'error': 'Failed to register user'}), 500
 
-@bp.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login_user():
     data = request.json
     email = data.get('email')
@@ -52,7 +54,7 @@ def login_user():
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user or not bcrypt.check_password_hash(user['password'], password):
         return jsonify({'error': 'Invalid email or password'}), 401
 
@@ -60,7 +62,7 @@ def login_user():
     return jsonify({'message': 'Login successful'}), 200
 
 
-@bp.route('/send_otp', methods=['POST'])
+@auth_bp.route('/send_otp', methods=['POST'])
 def send_otp():
     data = request.json
     email = data.get('email')
@@ -68,7 +70,7 @@ def send_otp():
     if not email:
         return jsonify({'error': 'Email is required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -81,7 +83,7 @@ def send_otp():
 
     return jsonify({'message': 'OTP sent successfully'}), 200
 
-@bp.route('/verify_otp', methods=['POST'])
+@auth_bp.route('/verify_otp', methods=['POST'])
 def verify_otp():
     data = request.json
     email = data.get('email')
@@ -90,7 +92,7 @@ def verify_otp():
     if not email or not otp:
         return jsonify({'error': 'Email and OTP are required'}), 400
 
-    user = Database.find_one({'email': email})
+    user = users_collection.find_one({'email': email})
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
@@ -101,7 +103,7 @@ def verify_otp():
         return jsonify({'error': 'Invalid or expired OTP'}), 401
 
 
-@bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST'])
 def logout_user():
     if 'user_id' in session:
         session.pop('user_id', None)
@@ -109,15 +111,15 @@ def logout_user():
     else:
         return jsonify({'error': 'User not logged in'}), 401
 
-@bp.before_app_request
+@auth_bp.before_app_request
 def load_logged_in_user():
     user_id = session.get('user_id')
     if user_id:
-        g.user = Database.find_one({'_id': ObjectId(user_id)})
+        g.user = users_collection.find_one({'_id': ObjectId(user_id)})
     else:
         g.user = None
 
-@bp.route('/profile', methods=['GET'])
+@auth_bp.route('/profile', methods=['GET'])
 def get_user_profile():
     if g.user:
         user_profile = {
@@ -130,7 +132,7 @@ def get_user_profile():
     else:
         return jsonify({'error': 'User not authenticated'}), 401
 
-@bp.route('/profile/update', methods=['PUT'])
+@auth_bp.route('/profile/update', methods=['PUT'])
 def update_user_profile():
     if not g.user:
         return jsonify({'error': 'User not authenticated'}), 401
@@ -141,11 +143,11 @@ def update_user_profile():
     if not new_email:
         return jsonify({'error': 'New email is required'}), 400
 
-    existing_user = Database.find_one({'email': new_email})
+    existing_user = users_collection.find_one({'email': new_email})
     if existing_user and existing_user['_id'] != g.user['_id']:
         return jsonify({'error': 'Email already registered'}), 400
 
-    result = Database.update_one(
+    result = users_collection.update_one(
         {'_id': g.user['_id']},
         {'$set': {'email': new_email, 'updated_at': datetime.utcnow()}}
     )
@@ -155,12 +157,12 @@ def update_user_profile():
     else:
         return jsonify({'error': 'Failed to update profile'}), 500
 
-@bp.route('/profile/delete', methods=['DELETE'])
+@auth_bp.route('/profile/delete', methods=['DELETE'])
 def delete_user_profile():
     if not g.user:
         return jsonify({'error': 'User not authenticated'}), 401
 
-    result = Database.delete_one({'_id': g.user['_id']})
+    result = users_collection.delete_one({'_id': g.user['_id']})
 
     if result.deleted_count > 0:
         session.pop('user_id', None)

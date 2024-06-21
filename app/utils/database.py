@@ -2,13 +2,15 @@
 
 import os
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, ConfigurationError, InvalidURI
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def get_mongo_uri():
     return os.getenv('MONGO_URI')
+
 
 class Database:
     def __init__(self, app=None, db_name=None):
@@ -27,9 +29,12 @@ class Database:
             raise ValueError("MongoDB URI must be provided in the environment")
 
         try:
-            self.client = MongoClient(mongo_uri)
+            self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)  # Timeout after 5 seconds
             self.db = self.client[db_name]
-        except ConnectionFailure as e:
+            # Attempt to make a request to verify connection
+            self.client.admin.command('ping')
+            print(f"Connected to MongoDB database: {db_name}")
+        except (ConnectionFailure, ConfigurationError, InvalidURI) as e:
             raise Exception(f"Failed to connect to MongoDB: {str(e)}")
 
     def get_client(self):
@@ -45,25 +50,29 @@ class Database:
     def close(self):
         if self.client is not None:
             self.client.close()
+            print("MongoDB connection closed.")
 
     def initialize_collections(self, collections):
         for collection_name, options in collections.items():
-            self.db.create_collection(collection_name, **options)
+            if collection_name not in self.db.list_collection_names():
+                self.db.create_collection(collection_name, **options)
 
     def drop_collections(self, collections):
         for collection_name in collections:
-            self.db.drop_collection(collection_name)
+            if collection_name in self.db.list_collection_names():
+                self.db.drop_collection(collection_name)
 
     def get_collection(self, collection_name):
         if self.db is None:
             raise Exception("Database connection is not established.")
-        
+
         if collection_name not in self.db.list_collection_names():
             try:
                 self.db.create_collection(collection_name)
             except Exception as e:
                 raise Exception(f"Failed to create collection '{collection_name}': {str(e)}")
         return self.db[collection_name]
+
 
 # Initialize the database instance
 db = Database()
