@@ -6,13 +6,14 @@ from flask_mail import Mail
 from app.config.config import get_config
 from app.controllers.auth_controller import auth_bp
 import os
+from app.utils.database import db
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 # Load configuration
 app.config.from_object(get_config())
-
+products_collection = db.get_collection('products')
 # Initialize the database with the application and the database name
 db.init_app(app, db_name="sway")
 mail = Mail(app)
@@ -51,6 +52,13 @@ def test_db_connection():
 @app.route('/health')
 def health_check():
     return jsonify({'status': 'healthy'}), 200
+
+@app.route('/products', methods=['GET'])
+def get_products():
+    products = list(products_collection.find())
+    for product in products:
+        product["_id"] = str(product["_id"])  # Convert ObjectId to string
+    return jsonify(products)
 
 #if __name__ == '__main__':
  #   app.run(debug=True)
